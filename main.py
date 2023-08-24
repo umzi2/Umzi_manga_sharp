@@ -4,6 +4,10 @@ import numpy as np
 import concurrent.futures
 import configparser
 from time import time as ttime
+
+image_folder = 'INPUT'
+output_folder = 'SHARP'
+
 config_file_path = "config.ini"
 t0 = ttime()
 default_config = {
@@ -39,8 +43,7 @@ def read_config():
         with open(config_file_path, "w") as configfile:
             config.write(configfile)
     return  diapason_white, low_input, high_input, low_output, high_output, gamma, diapason
-image_folder = 'INPUT'
-output_folder = 'SHARP'
+
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 if not os.path.exists(image_folder):
