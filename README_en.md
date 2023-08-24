@@ -1,6 +1,6 @@
 
 ## Setup Instructions:
-1. After the second step in the startup instructions, open config.ini in any text editor. 
+1. Open config.ini in any text editor. 
 
 2. Change the digit values:
 
