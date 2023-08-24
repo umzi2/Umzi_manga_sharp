@@ -3,7 +3,7 @@
 1. Open config.ini in any text editor. 
 
 2. Change the digit values:
-
+![](https://media.discordapp.net/attachments/771404630860759070/1131583186695102605/IMG_7656.png?width=555&height=513)
 ***Top of levels:***
 Low_input left slider (min:0, max:255, step:1)
 Hogh_input right slider (min:0, max:255, step:1)
