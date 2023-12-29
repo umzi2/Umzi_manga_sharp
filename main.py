@@ -2,7 +2,6 @@ from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 import json
 import os
-from time import time as ttime
 from tqdm import tqdm
 import cv2
 import numpy as np
@@ -83,12 +82,8 @@ if __name__ == "__main__":
     num_images = len(image_files)
     num_cores = os.cpu_count() if os.cpu_count() is not None else 1
 
-    t0 = ttime()
     with tqdm(total=num_images, desc="Processing images") as pbar:
         with ThreadPoolExecutor(max_workers=num_cores) as executor:
             futures = [executor.submit(process_image_with_progress, filename) for filename in image_files]
             for future in concurrent.futures.as_completed(futures):
                 future.result()
-    t1 = ttime()
-
-    print("Time spent:", t1 - t0)
