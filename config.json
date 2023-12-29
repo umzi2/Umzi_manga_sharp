@@ -1,0 +1,10 @@
+{
+    "low_input": 4,
+    "high_input": 255,
+    "low_output": 0,
+    "high_output": 255,
+    "gamma": 1.0,
+    "diapason_black": -1,
+    "diapason_white": -1,
+    "cenny":0
+}
