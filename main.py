@@ -1,89 +1,79 @@
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
-import json
-import os
-from tqdm import tqdm
+from utils.sharp import Sharp
 import cv2
 import numpy as np
 import argparse
+import os
+import json
+from tqdm.contrib.concurrent import process_map
 
 
-def process_image(filename):
-    image_path = os.path.abspath(os.path.join(image_folder, filename))
-    if not os.path.exists(image_path):
-        print(f"Файл {image_path} не найден. Пропуск файла.")
-        return
-    valid_extensions = ['.jpg', '.jpeg', '.png']
-    if not any(image_path.lower().endswith(ext) for ext in valid_extensions):
-        print(f"Файл {image_path} не является изображением. Пропуск файла.")
-        return
-    umzi = cv2.imread(image_path)
-    if umzi is None:
-        print(f"Не удалось загрузить изображение {image_path}. Пропуск файла.")
-        return
-    gray = cv2.cvtColor(umzi, cv2.COLOR_RGB2GRAY)
+class Start:
+    def __init__(self):
+        self.in_folder = ""
+        self.out_folder = str
+        self.sharp = Sharp
 
-    image = np.clip(((gray.astype(np.float32) - configs.get("low_input")) / (
-            configs.get("high_input") - configs.get("low_input"))) ** configs.get("gamma") * (
-                            configs.get("high_output") - configs.get("low_output")) + configs.get("low_output"), 0,
-                    255).astype(np.uint8)
-    if configs.get("diapason_black") != -1:
-        _, black_mask = cv2.threshold(image, configs.get("diapason_black"), 255, cv2.THRESH_BINARY)
-        blur = cv2.GaussianBlur(black_mask, (3, 3), 0)
+    def __arg_parse(self) -> None:
+        parser = argparse.ArgumentParser(description='Process some integers.')
+        parser.add_argument('-i', '--input', type=str,
+                            help='Input_folder')
+        parser.add_argument('-o', '--output', type=str,
+                            help='Output_folder')
 
-        output2 = np.clip(((blur.astype(np.float32) - 253) / (254 - 253)) ** 1.0 * (255 - 0) + 0, 0, 255).astype(
-            np.uint8)
-        image = cv2.bitwise_and(image, image, mask=output2)
+        args = parser.parse_args()
+        in_folder = args.input
+        out_folder = args.output
+        if not in_folder:
+            in_folder = "INPUT"
+        if not out_folder:
+            out_folder = "OUTPUT"
+        self.in_folder = in_folder
+        self.out_folder = out_folder
+        if not os.path.exists(out_folder):
+            os.makedirs(out_folder)
+        if not os.path.exists(in_folder):
+            os.makedirs(in_folder)
+            raise print("no in folder")
 
-    if configs.get("cenny"):
-        edges = cv2.Canny(image, 750, 800, apertureSize=3, L2gradient=True)
-        inverted_edges = cv2.bitwise_not(edges)
+    def __json_parse(self) -> None:
+        with open("config.json", "r") as f:
+            json_config = json.load(f)
+        if list(json_config.keys()) != ['low_input', 'high_input', 'diapason_white', 'cenny']:
+            raise print('Not correct config')
+        diapason_white = json_config["diapason_white"]
+        low_input = json_config["low_input"]
+        high_input = json_config["high_input"]
+        cenny = json_config["cenny"]
+        try:
+            self.sharp = Sharp(diapason_white, low_input, high_input, cenny)
+        except:
+            raise print("incorrect data type")
+        pass
 
-        image = cv2.bitwise_and(image, image, mask=inverted_edges)
+    def sharp_img(self, img_name):
+        try:
+            folder = f"{self.in_folder}/{img_name}"
+            basename = ".".join(img_name.split(".")[:-1])
+            img = cv2.imread(folder)
 
-    if configs.get("diapason_white") != -1:
-        gray2 = cv2.medianBlur(gray, 3)
-        mask2 = cv2.inRange(gray2, max(255 - configs.get("diapason_white"), 0),
-                            min(255 + configs.get("diapason_white"), 255))
-        image = cv2.add(image, mask2)
+            if img is None:
+                return print(f"{img_name}, not supported")
+            array = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY).astype(np.float32) / 255
+            cv2.imwrite(f"{self.out_folder}/{basename}.png", (self.sharp.run(array)) * 255)
+        except RuntimeError as e:
+            print(e)
 
-    output_path = os.path.join(output_folder, filename)
-    cv2.imwrite(output_path, image)
-
-
-def process_image_with_progress(filename):
-    process_image(filename)
-    pbar.update(1)  # Обновление прогресс-бара
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Image processing script")
-    parser.add_argument("--input_folder", type=str, default='INPUT',
-                        help="Path to the input image folder")
-    parser.add_argument("--output_folder", type=str, default='SHARP',
-                        help="Path to the output image folder")
-
-    return parser.parse_args()
+    def start_process(self) -> None:
+        self.__arg_parse()
+        self.__json_parse()
+        list_files = [
+            file
+            for file in os.listdir(self.in_folder)
+            if os.path.isfile(os.path.join(self.in_folder, file))
+        ]
+        process_map(self.sharp_img, list_files)
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    image_folder = args.input_folder
-    output_folder = args.output_folder
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-    if not os.path.exists(image_folder):
-        os.makedirs(image_folder)
-    with open('config.json') as f:
-        configs = json.load(f)
-
-    image_files = [f for f in os.listdir(image_folder) if
-                   os.path.isfile(os.path.join(image_folder, f)) and not f.startswith('.')]
-    num_images = len(image_files)
-    num_cores = os.cpu_count() if os.cpu_count() is not None else 1
-
-    with tqdm(total=num_images, desc="Processing images") as pbar:
-        with ThreadPoolExecutor(max_workers=num_cores) as executor:
-            futures = [executor.submit(process_image_with_progress, filename) for filename in image_files]
-            for future in concurrent.futures.as_completed(futures):
-                future.result()
+    s = Start()
+    s.start_process()
