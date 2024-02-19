@@ -1,6 +1,7 @@
 {
-    "low_input": 0,
-    "high_input": 255,
-    "diapason_white": -1,
+    "low_input": 40,
+    "high_input": 240,
+    "gamma": 1.0,
+    "diapason_white": 1,
     "cenny":true
 }

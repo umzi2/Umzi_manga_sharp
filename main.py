@@ -38,16 +38,17 @@ class Start:
     def __json_parse(self) -> None:
         with open("config.json", "r") as f:
             json_config = json.load(f)
-        if list(json_config.keys()) != ['low_input', 'high_input', 'diapason_white', 'cenny']:
+        if list(json_config.keys()) != ['low_input', 'high_input', "gamma", 'diapason_white', 'cenny']:
             raise print('Not correct config')
         diapason_white = json_config["diapason_white"]
         low_input = json_config["low_input"]
         high_input = json_config["high_input"]
+        gamma = json_config["gamma"]
         cenny = json_config["cenny"]
         try:
-            self.sharp = Sharp(diapason_white, low_input, high_input, cenny)
-        except:
-            raise print("incorrect data type")
+            self.sharp = Sharp(diapason_white, low_input, high_input, gamma, cenny)
+        except RuntimeError as e:
+            raise print(f"incorrect data type {e}")
         pass
 
     def sharp_img(self, img_name):
@@ -59,7 +60,8 @@ class Start:
             if img is None:
                 return print(f"{img_name}, not supported")
             array = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY).astype(np.float32) / 255
-            cv2.imwrite(f"{self.out_folder}/{basename}.png", (self.sharp.run(array)) * 255)
+            out_image = self.sharp.run(array) * 255
+            cv2.imwrite(f'{self.out_folder}/{basename}.png', out_image)
         except RuntimeError as e:
             print(e)
 
